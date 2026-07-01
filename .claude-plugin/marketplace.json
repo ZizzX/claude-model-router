@@ -1,0 +1,23 @@
+{
+  "name": "claude-model-router",
+  "owner": {
+    "name": "ZizzX"
+  },
+  "description": "Cost-aware subagent routing for Claude Code.",
+  "plugins": [
+    {
+      "name": "model-router",
+      "source": ".",
+      "displayName": "Claude Model Router",
+      "description": "Cost-aware subagents that route tasks to cheaper models — search to Haiku, research/review to Sonnet, code to Opus.",
+      "version": "1.0.0",
+      "author": {
+        "name": "ZizzX"
+      },
+      "homepage": "https://github.com/ZizzX/claude-model-router",
+      "repository": "https://github.com/ZizzX/claude-model-router",
+      "license": "MIT",
+      "keywords": ["agents", "subagents", "routing", "token-optimization"]
+    }
+  ]
+}
