@@ -51,7 +51,7 @@ Ships a `PreToolUse` hook on the `Agent` tool (`hooks/`, `scripts/route-advisor.
 Re-running the installer never duplicates the CLAUDE.md block (marker-guarded).
 
 ## Intentionally NOT ported
-- Project-specific agents (e.g. `ats-scout`) — tied to one repo, stay local.
+- Project-specific agents (a repo-tuned `scout`/`analyst` variant with your paths and rules) — keep those local.
 - Skills/plugins — installed via their own marketplace.
 - `settings.json` (hooks/permissions) — left untouched to avoid clobbering machine-specific config. Merge manually if wanted.
 
@@ -105,6 +105,6 @@ bash ~/claude-model-router/install.sh --link   # symlink (git pull обновл�
 Повторный install не дублирует блок в CLAUDE.md (маркеры).
 
 ### Что НЕ переносит (осознанно)
-- Проектные агенты (`ats-scout` и т.п.) — привязаны к одному репо, живут локально.
+- Проектные агенты (репо-тюнинг `scout`/`analyst` со своими путями и правилами) — держи локально.
 - Скиллы/плагины — через свой marketplace отдельно.
 - `settings.json` (хуки/permissions) — не трогает, чтобы не затереть машинно-специфичное. Мержить вручную.
