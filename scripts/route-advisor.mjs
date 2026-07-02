@@ -29,12 +29,22 @@ const prompt = String(ti.prompt || '').toLowerCase();
 // Intent detectors (RU + EN), shared by both nudges.
 const EDIT = /почини|исправ|измен|добав|удали|рефактор|напиши|напис|создай|создать|реализ|обнов|перепиши|fix|edit|chang|modif|refactor|writ|creat|implement|updat|generat|delet|remov|rewrit|build|patch/;
 const RETR = /найд|где определ|где живёт|где наход|поиск|перечисл|список|сколько|посчита|использован|кто вызыва|покажи структур|структур директор|locate|where is|where.s|search for|find all|list all|count|usages of|who calls|show.*structure|grep|map (the )?dir/;
+// Mechanical chores — running a command, not generating code. Cheapest tier is enough.
+const CHORE = /закоммить|запушь|запуш|коммитни|сделай коммит|застейдж|отформатируй|прогони (линт|тест|прет|prettier|eslint|сборк)|забамп|подними верси|синхрониз.* кэш|git commit|git push|git add|git stash|\bcommit\b|\bpush\b|stage (the|these|changes)|bump (the )?version|run (the )?(formatter|prettier|lint|linter|tests?|build)|regenerate|format the/;
+// Strong code-authoring verbs. Distinct from the loose EDIT set so a chore like
+// "commit the changes" (RU "закоммить изменения" — where "изменения" trips EDIT's
+// "измен") is NOT misread as codegen. Chore only defers to a REAL authoring verb.
+const CODEGEN = /почини|исправ|рефактор|напиши|напис|создай|создать|реализ|перепиши|fix|refactor|implement|rewrit|writ|creat|generat|patch/;
 
 const hasEdit = EDIT.test(prompt);
 const hasRetr = RETR.test(prompt);
-// Edit takes precedence — mirrors "edit => bias to quality".
+const hasChore = CHORE.test(prompt);
+const hasCodegen = CODEGEN.test(prompt);
+// Precedence: a chore with no real codegen verb is cheapest; else edit => quality,
+// else retrieval, else other.
 let klass = 'other';
-if (hasEdit) klass = 'edit';
+if (hasChore && !hasCodegen) klass = 'chore';
+else if (hasEdit) klass = 'edit';
 else if (hasRetr) klass = 'retrieval';
 
 // Infer the tier that will actually run: explicit model wins, else the type's
@@ -65,7 +75,10 @@ if (tier === 'ceiling') {
     out = '[claude-model-router] This subagent is set to `fable` (top-tier, most expensive) for read-only analysis. Prefer the `analyst` agent (Sonnet) — or `opus`+effort:high if it needs hard reasoning. If fable is truly warranted, ignore this and proceed.';
   }
 } else if (subagent === 'general-purpose' || subagent === 'claude' || subagent === '') {
-  if (model !== 'haiku' && klass === 'retrieval') {
+  if (model !== 'haiku' && klass === 'chore') {
+    nudge = 'C';
+    out = '[claude-model-router] This looks like a mechanical chore (commit/push/format/bump/run a command) — not code generation. Prefer the cheapest model: spawn `scout` (Haiku) or pass model:"haiku". Reserve top-tier for real codegen/reasoning.';
+  } else if (model !== 'haiku' && klass === 'retrieval') {
     nudge = 'A';
     out = '[claude-model-router] This subagent task looks read-only (locate/search). Prefer the `scout` agent (Haiku, ~60x cheaper) instead of a top-tier generic agent. If the task actually needs edits or hard reasoning, ignore this and proceed.';
   }

@@ -8,10 +8,11 @@
 | Subagent task | Agent type / model |
 |---|---|
 | search / locate / count / "where is X" / "does it already exist?" / map a directory | `scout` (haiku) |
+| **mechanical chore** — commit / push / stage, run a formatter / linter / tests, bump a version, trivial rename | `scout` (haiku) or `model:"haiku"` |
 | research before coding / synthesis / diff review / parity check / plan / summarization | `analyst` (sonnet) |
 | code generation / hard reasoning | generic `Agent` (opus) |
 
-Rule: **never spawn a subagent without deciding its model.** Search → `scout`; analysis / review / plan → `analyst`; code / logic only → Opus. Spawning several independent read-only tasks → send them in one message (they run in parallel).
+Rule: **never spawn a subagent without deciding its model.** Search → `scout`; **chore (commit/push/format/bump) → cheapest (`haiku`), never Opus**; analysis / review / plan → `analyst`; code / logic only → Opus. Spawning several independent read-only tasks → send them in one message (they run in parallel).
 
 **Ceiling = Opus.** `fable` is the most expensive model, sits ABOVE opus, and is not a routing target. Don't spawn a subagent on `fable` unless the task genuinely needs it: code/build → `opus`+effort:high, analysis → `sonnet`, search → `haiku`. The advisory hook nudges `fable` spawns back down the ladder — symmetrically to how it nudges read-only work off the top tier down to cheap.
 

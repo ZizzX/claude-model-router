@@ -50,13 +50,14 @@ const tierOfModel = (m) => {
 };
 
 const byModel = {}, byTier = {}, byClass = {};
-let nA = 0, nB = 0;
+let nA = 0, nB = 0, nC = 0;
 for (const e of events) {
   byModel[e.model] = (byModel[e.model] || 0) + 1;
   byTier[e.tier] = (byTier[e.tier] || 0) + 1;
   byClass[e.class] = (byClass[e.class] || 0) + 1;
   if (e.nudge === 'A') nA++;
   if (e.nudge === 'B') nB++;
+  if (e.nudge === 'C') nC++;
 }
 
 // ── formatting helpers ──
@@ -107,10 +108,10 @@ for (const t of ['cheap', 'mid', 'top', 'ceiling']) {
   L.push('  ' + padE(t, 8) + ' ' + padE(bar(byTier[t], maxTier), BARW) + ' ' + padS(byTier[t], 3) + '  ' + padS(pct(byTier[t], total) + '%', 5));
 }
 L.push('');
-const cls = ['retrieval', 'edit', 'other'].filter((c) => byClass[c]).map((c) => `${c} ${byClass[c]} (${pct(byClass[c], total)}%)`);
+const cls = ['retrieval', 'chore', 'edit', 'other'].filter((c) => byClass[c]).map((c) => `${c} ${byClass[c]} (${pct(byClass[c], total)}%)`);
 L.push('TASK CLASS   ' + cls.join('  ·  '));
 L.push('');
-L.push('NUDGES FIRED   A top→cheap: ' + nA + '    B fable→down: ' + nB);
+L.push('NUDGES FIRED   A top→cheap: ' + nA + '    B fable→down: ' + nB + '    C chore→cheap: ' + nC);
 L.push('');
 L.push('SAVINGS vs baseline "everything on opus" (≈ no cheap delegation)');
 const maxBar = Math.max(baseline, totalSpend, Math.abs(saved));
