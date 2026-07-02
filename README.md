@@ -19,6 +19,8 @@ Portable Claude Code config that routes subagents to cheaper models (Haiku/Sonne
 | research / review / plan / synthesis | `analyst` | sonnet (~5× cheaper than Opus) |
 | code generation / hard reasoning | generic `Agent` | opus |
 
+`opus` is the ceiling. A `PreToolUse` advisory hook nudges both ways: pure-retrieval tasks on a top-tier agent → down to `scout` (haiku), and any subagent explicitly set to `fable` (above opus, most expensive) → back down to `opus`+high, or lower for analysis/retrieval. Advisory only — never blocks.
+
 ## Install
 
 ### Option A — plugin (as easy as skills, recommended)
@@ -75,6 +77,8 @@ Re-running the installer never duplicates the CLAUDE.md block (marker-guarded).
 | поиск / локация / подсчёт | `scout` | haiku (~60× дешевле Opus) |
 | ресёрч / ревью / план / синтез | `analyst` | sonnet (~5× дешевле Opus) |
 | генерация кода / сложная логика | generic `Agent` | opus |
+
+`opus` — потолок. `PreToolUse`-хук советует в обе стороны: read-only задачи на топовом агенте → вниз до `scout` (haiku), а любой субагент, явно поставленный на `fable` (над opus, самый дорогой) → обратно на `opus`+high, либо ниже для анализа/поиска. Только совет — никогда не блокирует.
 
 ### Установка
 
