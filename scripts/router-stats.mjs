@@ -81,21 +81,22 @@ if (usage.length) {
   const saved = totalBase - totalCost;
   const maxCost = Math.max(...rows.map((x) => x.cost));
 
-  L.push('claude-model-router — REAL spend   (' + usage.length + ' subagents)');
+  // ── SUMMARY: the headline numbers, up top ──
+  L.push('══════ SUBAGENT SUMMARY (real) ══════');
+  L.push('  subagents run      ' + padS(usage.length, 10));
+  L.push('  tokens used        ' + padS(tok(totalTok), 10));
+  L.push('  spent (actual)     ' + padS(usd(totalCost), 10));
+  L.push('  if all on opus     ' + padS(usd(totalBase), 10) + '   ← cost with no cheap delegation');
+  L.push('  YOU SAVED          ' + padS(usd(saved), 10) + '   (' + pct(saved, totalBase) + '% cheaper)');
+  const maxB = Math.max(totalBase, totalCost, Math.abs(saved), 1);
+  L.push('    spent  ' + padE(bar(totalCost, maxB), BARW) + ' ' + usd(totalCost));
+  L.push('    saved  ' + padE(bar(Math.max(0, saved), maxB), BARW) + ' ' + usd(saved));
   L.push('');
-  L.push('SPEND BY MODEL  (real tokens · real $ · share)');
+  L.push('spend by model  (real tokens · $ · share)');
   for (const x of rows) {
     L.push('  ' + padE(x.m.replace('claude-', '').replace(/-\d{8}$/, ''), 14) + ' ' + padE(bar(x.cost, maxCost), BARW) + ' ' +
       padS(tok(x.tokens), 6) + '  ' + padS(usd(x.cost), 8) + '  ' + padS(pct(x.cost, totalCost) + '%', 6));
   }
-  L.push('  ' + '─'.repeat(52));
-  L.push('  ' + padE('total', 14) + ' ' + ' '.repeat(BARW) + ' ' + padS(tok(totalTok), 6) + '  ' + padS(usd(totalCost), 8));
-  L.push('');
-  L.push('SAVINGS vs "every subagent on opus" (real tokens, opus rates)');
-  const maxB = Math.max(totalBase, totalCost, Math.abs(saved));
-  L.push('  baseline  ' + padE(bar(totalBase, maxB), BARW) + ' ' + padS(usd(totalBase), 9));
-  L.push('  actual    ' + padE(bar(totalCost, maxB), BARW) + ' ' + padS(usd(totalCost), 9));
-  L.push('  saved     ' + padE(bar(Math.max(0, saved), maxB), BARW) + ' ' + padS(usd(saved), 9) + '  (' + pct(saved, totalBase) + '%)');
   L.push('');
 }
 
