@@ -1,22 +1,22 @@
 <!-- BEGIN claude-model-router: subagent-routing -->
-## Роутинг субагентов (рычаг стоимости)
+## Subagent routing (the cost lever)
 
-**Рефлекс перед любой работой с кодом:** прежде чем читать/грепать/анализировать в ОСНОВНОМ контексте — спроси себя «это можно делегировать субагенту?». Поиск/локация/подсчёт и read-only ресёрч/ревью — ВСЕГДА делегируй (scout/analyst), не жги основной контекст и не плати Opus за retrieval. В основном контексте оставляй только генерацию кода и решения. Не уверен между «сам или субагент» для read-only — делегируй.
+**Delegate-first reflex — before any code work:** before you read, grep, or analyze in the MAIN context, ask "can a subagent do this?" Search / locate / count and read-only research / review — ALWAYS delegate (scout / analyst); don't burn the main context or pay Opus for retrieval. Keep only code generation and decisions in the main thread. If unsure whether to do read-only work yourself vs delegate → delegate.
 
-Дефолт `Agent()`/Task наследует модель родителя (обычно Opus). Спавн без явного `model:` = Opus по полной цене. Решай модель на КАЖДОМ спавне — через ТИП агента (тип диктует модель надёжнее ручного `model:`):
+`Agent()`/Task inherits the parent model (usually Opus) by default — a spawn with no explicit `model:` = Opus at full price. Decide the model on EVERY spawn, preferably by agent TYPE (the type pins the model more reliably than a manual `model:`):
 
-| Тип задачи субагента | Агент-тип / модель |
+| Subagent task | Agent type / model |
 |---|---|
-| поиск / локация / подсчёт / «где X» / «уже есть?» / map директории | `scout` (haiku) |
-| ресёрч перед кодом / синтез / ревью диффа / parity-сверка / план / суммаризация | `analyst` (sonnet) |
-| генерация кода / сложное рассуждение | generic `Agent` (opus) |
+| search / locate / count / "where is X" / "does it already exist?" / map a directory | `scout` (haiku) |
+| research before coding / synthesis / diff review / parity check / plan / summarization | `analyst` (sonnet) |
+| code generation / hard reasoning | generic `Agent` (opus) |
 
-Правило: **никогда не спавни субагент без решения о модели.** Поиск → `scout`; анализ/ревью/план → `analyst`; только код/логика → Opus. Спавнишь несколько независимых read-only задач — шли их одним сообщением (параллельно).
+Rule: **never spawn a subagent without deciding its model.** Search → `scout`; analysis / review / plan → `analyst`; code / logic only → Opus. Spawning several independent read-only tasks → send them in one message (they run in parallel).
 
-**Потолок = Opus.** `fable` — самая дорогая модель, стоит НАД opus и целью роутинга не является. Не спавни субагент на `fable`, если задача этого прямо не требует: код/build → `opus`+effort:high, анализ → `sonnet`, поиск → `haiku`. Хук-советчик толкает `fable`-спавны обратно вниз по лестнице — зеркально тому, как толкает read-only задачи с топа на cheap.
+**Ceiling = Opus.** `fable` is the most expensive model, sits ABOVE opus, and is not a routing target. Don't spawn a subagent on `fable` unless the task genuinely needs it: code/build → `opus`+effort:high, analysis → `sonnet`, search → `haiku`. The advisory hook nudges `fable` spawns back down the ladder — symmetrically to how it nudges read-only work off the top tier down to cheap.
 
-## Экономия prompt cache
-- Картинки/скрины — все одним первым сообщением, не капать по одной посреди сессии (скрин в середине → пере-кэш всего хвоста, ~$1-2/ход на Opus).
-- Не менять CLAUDE.md / не ставить MCP-сервер посреди сессии — сдвигает стабильный префикс → полная перезапись.
-- `/clear` между задачами — короткие сессии дешевле и качественнее длинных.
+## Prompt-cache hygiene
+- Send all images/screenshots in the first message — dropping one mid-session re-caches the whole tail (~$1–2/turn on Opus).
+- Don't edit CLAUDE.md or add an MCP server mid-session — it shifts the stable prefix and forces a full re-cache.
+- `/clear` between unrelated tasks — shorter sessions are cheaper and higher quality.
 <!-- END claude-model-router: subagent-routing -->

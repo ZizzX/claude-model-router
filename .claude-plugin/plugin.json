@@ -1,7 +1,7 @@
 {
   "name": "model-router",
   "displayName": "Claude Model Router",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Cost-aware subagents that route tasks to cheaper models — search to Haiku, research/review to Sonnet, code to Opus — and nudge fable spawns back down to Opus.",
   "author": {
     "name": "ZizzX"
