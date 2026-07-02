@@ -13,7 +13,9 @@
 #      it that opus can't do. Fires on ANY subagent type (a `model:` override
 #      beats the type's pinned model), so it runs before the type gate.
 #
-# Worst case = an ignored hint.
+# Side effect: appends ONE JSONL event per spawn to the event log (tier/model/
+# class/nudge) for `router-stats.sh` to aggregate. Logging is fully guarded and
+# never affects the tool call. Worst case = an ignored hint.
 set -euo pipefail
 
 # Fail-safe: no jq => do nothing (never break the tool call).
@@ -42,43 +44,66 @@ emit() {  # $1 = advisory text
   }'
 }
 
-# ── Nudge B: cap the ceiling — fable (or pricier than opus) is almost always overkill.
-# Match `fable` in any form (bare enum value or full model id). Runs first and
-# regardless of subagent type, because `model:` overrides the type's pinned tier.
+# ── Classify the task (edit takes precedence — mirrors "edit => bias to quality").
+CLASS="other"
+if has_edit_verb; then CLASS="edit"; elif has_retrieval_signal; then CLASS="retrieval"; fi
+
+# ── Infer the tier that will actually run: explicit model wins, else the type's
+#    pinned model, else parent inheritance (opus => top).
 case "$MODEL" in
-  fable|fable-*|claude-fable-*|*-fable-*)
-    if has_retrieval_signal && ! has_edit_verb; then
-      emit "[claude-model-router] This subagent is set to \`fable\` (top-tier, most expensive) but the task looks read-only (locate/search). Prefer the \`scout\` agent (Haiku, ~60x cheaper). If it truly needs fable-class capability, ignore this and proceed."
-    elif ! has_edit_verb; then
-      emit "[claude-model-router] This subagent is set to \`fable\` (top-tier, most expensive) for read-only analysis. Prefer the \`analyst\` agent (Sonnet) — or \`opus\`+effort:high if it needs hard reasoning. If fable is truly warranted, ignore this and proceed."
-    else
-      emit "[claude-model-router] This subagent is set to \`fable\` (top-tier, most expensive). For code/build tasks prefer \`opus\`+effort:high — nearly as capable, materially cheaper. Reserve fable for tasks that genuinely need its edge; otherwise ignore this and proceed."
-    fi
-    exit 0
-    ;;
+  haiku)                                TIER="cheap" ;;
+  sonnet)                               TIER="mid" ;;
+  opus)                                 TIER="top" ;;
+  fable|fable-*|claude-fable-*|*-fable-*) TIER="ceiling" ;;
+  "")
+    case "$SUBAGENT" in
+      *scout*)   TIER="cheap" ;;
+      *analyst*) TIER="mid" ;;
+      *)         TIER="top" ;;   # generic/Explore/etc inherit the parent (opus)
+    esac ;;
+  *)                                    TIER="top" ;;   # unknown explicit model
 esac
 
-# ── Nudge A: downgrade a pure-retrieval task off a generic top-tier subagent.
-# 1. Only nudge generic top-tier subagents. Already-cheap/read-only agents => skip.
-case "$SUBAGENT" in
-  general-purpose|claude|"") : ;;                         # candidates
-  *) exit 0 ;;                                            # scout/analyst/Explore/etc — leave alone
-esac
+# ── Decide which nudge (if any) fires. NUDGE also becomes the logged field.
+NUDGE="none"
+OUT=""
 
-# 2. Explicit cheap model already chosen => nothing to do.
-case "$MODEL" in
-  haiku) exit 0 ;;
-esac
-
-# 3. Edit/build intent => bias to quality, stay silent.
-if has_edit_verb; then
-  exit 0
+if [ "$TIER" = "ceiling" ]; then
+  # Nudge B: fable is above opus — steer back down the ladder by task class.
+  NUDGE="B"
+  if [ "$CLASS" = "retrieval" ]; then
+    OUT="[claude-model-router] This subagent is set to \`fable\` (top-tier, most expensive) but the task looks read-only (locate/search). Prefer the \`scout\` agent (Haiku, ~60x cheaper). If it truly needs fable-class capability, ignore this and proceed."
+  elif [ "$CLASS" = "edit" ]; then
+    OUT="[claude-model-router] This subagent is set to \`fable\` (top-tier, most expensive). For code/build tasks prefer \`opus\`+effort:high — nearly as capable, materially cheaper. Reserve fable for tasks that genuinely need its edge; otherwise ignore this and proceed."
+  else
+    OUT="[claude-model-router] This subagent is set to \`fable\` (top-tier, most expensive) for read-only analysis. Prefer the \`analyst\` agent (Sonnet) — or \`opus\`+effort:high if it needs hard reasoning. If fable is truly warranted, ignore this and proceed."
+  fi
+else
+  # Nudge A: downgrade a pure-retrieval task off a generic top-tier subagent.
+  case "$SUBAGENT" in
+    general-purpose|claude|"")
+      if [ "$MODEL" != "haiku" ] && [ "$CLASS" = "retrieval" ]; then
+        NUDGE="A"
+        OUT="[claude-model-router] This subagent task looks read-only (locate/search). Prefer the \`scout\` agent (Haiku, ~60x cheaper) instead of a top-tier generic agent. If the task actually needs edits or hard reasoning, ignore this and proceed."
+      fi ;;
+  esac
 fi
 
-# 4. Pure-retrieval signal => nudge to scout. No match => stay silent.
-if has_retrieval_signal; then
-  emit "[claude-model-router] This subagent task looks read-only (locate/search). Prefer the \`scout\` agent (Haiku, ~60x cheaper) instead of a top-tier generic agent. If the task actually needs edits or hard reasoning, ignore this and proceed."
-  exit 0
-fi
+# ── Log the event (always, guarded — never breaks the tool call).
+LOG="${MR_LOG:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/model-router/events.jsonl}"
+{
+  mkdir -p "$(dirname "$LOG")" 2>/dev/null &&
+  TS="$(date -u +%FT%TZ 2>/dev/null || echo "")" &&
+  jq -nc \
+    --arg ts "$TS" \
+    --arg type "${SUBAGENT:-inherit}" \
+    --arg model "${MODEL:-inherit}" \
+    --arg tier "$TIER" \
+    --arg class "$CLASS" \
+    --arg nudge "$NUDGE" \
+    '{ts:$ts,type:$type,model:$model,tier:$tier,class:$class,nudge:$nudge}' >> "$LOG" 2>/dev/null
+} || true
 
+# ── Emit the advisory (if any) and exit successfully no matter what.
+[ -n "$OUT" ] && emit "$OUT"
 exit 0

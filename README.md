@@ -21,6 +21,14 @@ Portable Claude Code config that routes subagents to cheaper models (Haiku/Sonne
 
 `opus` is the ceiling. A `PreToolUse` advisory hook nudges both ways: pure-retrieval tasks on a top-tier agent → down to `scout` (haiku), and any subagent explicitly set to `fable` (above opus, most expensive) → back down to `opus`+high, or lower for analysis/retrieval. Advisory only — never blocks.
 
+## Impact report
+The hook logs one JSONL event per subagent spawn (tier / model / task class / which nudge fired) to `~/.claude/model-router/events.jsonl`. See routing distribution, model mix, nudge counts, and an **estimated** token/cost saving vs an all-opus baseline:
+```
+bash "$(dirname "$(which claude 2>/dev/null)")/../scripts/router-stats.sh"   # or, from the plugin dir:
+bash scripts/router-stats.sh
+```
+Savings are an estimate (the hook sees the *requested* model, not real usage). Tune via env: `MR_AVG_TOKENS` (tok/subagent), `MR_OPUS_PRICE` ($/Mtok), `MR_W_CHEAP|MR_W_MID|MR_W_CEILING` (per-tier price weight vs opus). A `fable` spawn shows as negative savings (overspend vs opus).
+
 ## Install
 
 ### Option A — plugin (as easy as skills, recommended)
