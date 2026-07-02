@@ -45,7 +45,11 @@ router-stats
 # Windows: add %USERPROFILE%\.claude\model-router to PATH, then:
 router-stats.cmd
 ```
-It renders ASCII bar charts: **spend by model** (est. tokens · share · est.$), **tier distribution**, task class, nudge counts, and a **savings** block comparing actual routing vs an all-opus baseline (≈ what it would cost with no cheap delegation). Savings are an estimate — the hook sees the *requested* model, not real usage; every spawn is assumed to be `MR_AVG_TOKENS`. Tune via env: `MR_AVG_TOKENS` (tok/spawn), `MR_OPUS_PRICE` ($/Mtok), `MR_W_CHEAP|MR_W_MID|MR_W_CEILING` (per-tier price weight vs opus). A `fable` spawn costs more than opus, so it reduces savings. For **real** per-model $ across the whole session, use the [token-optimizer](https://github.com/alexgreensh/token-optimizer) plugin — this report is about routing decisions, not exact billing.
+Two data sources feed the report:
+- **Real spend** — a `SubagentStop` hook (`scripts/subagent-usage.mjs`) reads each finished subagent's transcript and logs its **actual** token usage per model to `~/.claude/model-router/usage.jsonl`. The report leads with real tokens, real $ (per-model price table — opus 5/25, sonnet 3/15, haiku 1/5, fable 10/50 $/Mtok in/out), and real savings vs an "every subagent on opus" baseline.
+- **Routing** — the `PreToolUse` log gives tier distribution, nudge counts (A/B/C), and an estimated *missed savings* line (retrieval/chore spawns that ran top-tier).
+
+When no real usage is captured yet, it falls back to a spawn-count **estimate** (`MR_AVG_TOKENS` per spawn). Tune via env: `MR_AVG_TOKENS`, `MR_OPUS_PRICE`, `MR_W_CHEAP|MR_W_MID|MR_W_CEILING`. For whole-session billing across the main loop too, use the [token-optimizer](https://github.com/alexgreensh/token-optimizer) plugin — this report focuses on subagent routing.
 
 ## Install
 

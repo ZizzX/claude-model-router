@@ -23,6 +23,17 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/subagent-usage.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
