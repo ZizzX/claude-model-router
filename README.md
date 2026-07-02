@@ -29,12 +29,15 @@ Installing the plugin is enough. Two mechanisms make the agent remember to spawn
 
 The hook can't *force* delegation (it only reacts once you already call the `Agent` tool), but the SessionStart rule primes the agent to reach for `scout`/`analyst` before doing read-only work itself.
 
-## Impact report
-The advisory hook logs one JSONL event per subagent spawn (tier / requested model / task class / which nudge fired) to `~/.claude/model-router/events.jsonl`. See routing distribution, model mix, nudge counts, and an **estimated** token/cost saving vs an all-opus baseline:
+## Impact report (terminal command)
+The advisory hook logs one JSONL event per subagent spawn (tier / requested model / task class / which nudge fired) to `~/.claude/model-router/events.jsonl`.
+
+The `SessionStart` hook installs a **version-independent launcher** on first session start, so any user gets the same terminal command regardless of which plugin version is active:
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT:-<plugin-dir>}"/scripts/router-stats.sh
+router-stats                          # if ~/.local/bin is on your PATH (auto-symlinked)
+~/.claude/model-router/router-stats   # always works
 ```
-Savings are an estimate (the hook sees the *requested* model, not real usage). Tune via env: `MR_AVG_TOKENS` (tok/subagent), `MR_OPUS_PRICE` ($/Mtok), `MR_W_CHEAP|MR_W_MID|MR_W_CEILING` (per-tier price weight vs opus). A `fable` spawn shows as negative savings (overspend vs opus).
+It prints the routing distribution, model mix, nudge counts, and an **estimated** token/cost saving vs an all-opus baseline. Savings are an estimate (the hook sees the *requested* model, not real usage). Tune via env: `MR_AVG_TOKENS` (tok/subagent), `MR_OPUS_PRICE` ($/Mtok), `MR_W_CHEAP|MR_W_MID|MR_W_CEILING` (per-tier price weight vs opus). A `fable` spawn shows as negative savings (overspend vs opus).
 
 ## Install
 
