@@ -45,7 +45,7 @@ router-stats
 # Windows: add %USERPROFILE%\.claude\model-router to PATH, then:
 router-stats.cmd
 ```
-It prints the routing distribution, model mix, nudge counts, and an **estimated** token/cost saving vs an all-opus baseline. Savings are an estimate (the hook sees the *requested* model, not real usage). Tune via env: `MR_AVG_TOKENS` (tok/subagent), `MR_OPUS_PRICE` ($/Mtok), `MR_W_CHEAP|MR_W_MID|MR_W_CEILING` (per-tier price weight vs opus). A `fable` spawn shows as negative savings (overspend vs opus).
+It renders ASCII bar charts: **spend by model** (est. tokens · share · est.$), **tier distribution**, task class, nudge counts, and a **savings** block comparing actual routing vs an all-opus baseline (≈ what it would cost with no cheap delegation). Savings are an estimate — the hook sees the *requested* model, not real usage; every spawn is assumed to be `MR_AVG_TOKENS`. Tune via env: `MR_AVG_TOKENS` (tok/spawn), `MR_OPUS_PRICE` ($/Mtok), `MR_W_CHEAP|MR_W_MID|MR_W_CEILING` (per-tier price weight vs opus). A `fable` spawn costs more than opus, so it reduces savings. For **real** per-model $ across the whole session, use the [token-optimizer](https://github.com/alexgreensh/token-optimizer) plugin — this report is about routing decisions, not exact billing.
 
 ## Install
 
