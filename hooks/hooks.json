@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/route-advisor.sh",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/route-advisor.mjs\"",
             "timeout": 10
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/session-guidance.sh",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/session-guidance.mjs\"",
             "timeout": 10
           }
         ]

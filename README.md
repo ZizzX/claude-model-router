@@ -4,14 +4,16 @@ Portable Claude Code config that routes subagents to cheaper models (Haiku/Sonne
 
 > **Scope: Claude Code only.** The routing *concept* is portable — the tier policy lives in [`ROUTING.md`](./ROUTING.md) tool-agnostically — but supporting another agent tool (Codex, Cursor, …) needs an adapter that maps tiers to that tool's model/effort knobs.
 
+> **Runtime: Node.js** (already required by Claude Code — nothing extra to install). The hooks and reporter are plain `.mjs`, so they run identically on **macOS, Linux, and native Windows** — no bash, no `jq`.
+
 ## What's inside
 - `agents/scout.md` — read-only code locator on **Haiku** (search / "where is X" / "does it already exist?").
 - `agents/analyst.md` — read-only analyst on **Sonnet** (research / review / plan / synthesis).
-- `hooks/` + `scripts/route-advisor.sh` — `PreToolUse` advisory hook on the `Agent` tool (nudges + per-spawn logging).
-- `scripts/session-guidance.sh` — `SessionStart` hook that injects the routing rule into context (so a plugin install alone makes the agent delegate-aware).
-- `scripts/router-stats.sh` — impact report from the spawn log.
+- `hooks/hooks.json` + `scripts/route-advisor.mjs` — `PreToolUse` advisory hook on the `Agent` tool (nudges + per-spawn logging).
+- `scripts/session-guidance.mjs` — `SessionStart` hook that injects the routing rule into context and installs the `router-stats` launcher (so a plugin install alone makes the agent delegate-aware).
+- `scripts/router-stats.mjs` — impact report from the spawn log.
 - `CLAUDE.routing.md` — the canonical routing rule (source of truth for both the SessionStart hook and `install.sh`).
-- `install.sh` — idempotent installer for the non-plugin path (copy or `--link`).
+- `install.sh` — idempotent installer for the non-plugin path on Unix (copy or `--link`).
 
 ## Routing model
 | Task | Agent type | Model |
@@ -32,10 +34,16 @@ The hook can't *force* delegation (it only reacts once you already call the `Age
 ## Impact report (terminal command)
 The advisory hook logs one JSONL event per subagent spawn (tier / requested model / task class / which nudge fired) to `~/.claude/model-router/events.jsonl`.
 
-The `SessionStart` hook installs a **version-independent launcher** on first session start, so any user gets the same terminal command regardless of which plugin version is active:
+The `SessionStart` hook installs a **version-independent launcher** on first session start, so any user gets the same terminal command regardless of which plugin version is active. Pick the form for your OS:
 ```bash
-router-stats                          # if ~/.local/bin is on your PATH (auto-symlinked)
-~/.claude/model-router/router-stats   # always works
+# Any OS (always works — Node is already installed):
+node ~/.claude/model-router/router-stats.mjs
+
+# macOS / Linux convenience (symlinked into ~/.local/bin if that dir exists & is on PATH):
+router-stats
+
+# Windows: add %USERPROFILE%\.claude\model-router to PATH, then:
+router-stats.cmd
 ```
 It prints the routing distribution, model mix, nudge counts, and an **estimated** token/cost saving vs an all-opus baseline. Savings are an estimate (the hook sees the *requested* model, not real usage). Tune via env: `MR_AVG_TOKENS` (tok/subagent), `MR_OPUS_PRICE` ($/Mtok), `MR_W_CHEAP|MR_W_MID|MR_W_CEILING` (per-tier price weight vs opus). A `fable` spawn shows as negative savings (overspend vs opus).
 
