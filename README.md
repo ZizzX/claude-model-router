@@ -82,3 +82,11 @@ bash ~/claude-model-router/install.sh --link   # symlink (git pull auto-updates 
 - Project-specific agents (a repo-tuned `scout`/`analyst` variant with your paths and rules) — keep those local.
 - Skills/plugins — installed via their own marketplace.
 - `settings.json` (permissions) — left untouched to avoid clobbering machine-specific config.
+
+## Companions
+
+- [claude-output-trim](https://github.com/ZizzX/claude-output-trim) — losslessly shrinks oversized tool outputs.
+- [claude-context-guard](https://github.com/ZizzX/claude-context-guard) — advisory guards for context hygiene (big reads, cache-busting edits).
+- [claude-image-offload](https://github.com/ZizzX/claude-image-offload) — keeps images out of the main context (vision subagent + persistent text handoff).
+
+The quartet covers the four token leaks: model price (router), output bloat (trim), context habits (guard), image cache-busts (image-offload).
