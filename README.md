@@ -6,6 +6,18 @@ Portable Claude Code config that routes subagents to cheaper models (Haiku/Sonne
 
 > **Runtime: Node.js** (already required by Claude Code — nothing extra to install). The hooks and reporter are plain `.mjs`, so they run identically on **macOS, Linux, and native Windows** — no bash, no `jq`.
 
+## Why
+
+A subagent spawned via the `Agent` tool **inherits the parent model by default** — on an
+Opus (or Fable) session every "where is X defined?" grep-errand runs at top-tier price.
+But retrieval doesn't need top-tier reasoning: Haiku is ~60× cheaper per token and
+answers "locate / count / does it exist?" just as well; Sonnet (~5× cheaper) covers
+read-only research, review, and planning. Routing each subagent to the cheapest model
+that can do the job is the single biggest cost lever in a Claude Code session.
+
+Measured in practice: **−60.7%** on subagent spend in one real session ($5.29 saved
+across 7 subagents) — reported from *actual* per-subagent transcripts, not estimates.
+
 ## What's inside
 - `agents/scout.md` — read-only code locator on **Haiku** (search / "where is X" / "does it already exist?").
 - `agents/analyst.md` — read-only analyst on **Sonnet** (research / review / plan / synthesis).
@@ -31,7 +43,51 @@ Installing the plugin is enough. Two mechanisms make the agent remember to spawn
 
 The hook can't *force* delegation (it only reacts once you already call the `Agent` tool), but the SessionStart rule primes the agent to reach for `scout`/`analyst` before doing read-only work itself.
 
-## Impact report (terminal command)
+## Usage
+
+Mostly hands-off — after install the agent routes on its own. What you can do explicitly:
+
+- **Just work.** Ask anything ("where is the retry logic?", "review this diff") — the
+  agent spawns `scout` (haiku) for searches and `analyst` (sonnet) for read-only
+  analysis instead of burning its own top-tier context.
+- **Steer a spawn by name**: "use scout to find all callers of `formatAssetUrl`",
+  "have analyst summarize this RFC". Agent types pin the model more reliably than a
+  manual `model:` override.
+- **Parallel fan-out**: several independent read-only questions → the agent sends
+  multiple scout/analyst spawns in one message; they run concurrently at haiku/sonnet price.
+- **Watch the nudges**: spawn a retrieval task on a top-tier agent (or anything on
+  `fable`) and the advisory hook answers with a downgrade suggestion — advisory only,
+  the spawn still runs if the model insists.
+
+### Impact report
+
+```bash
+router-stats        # or: node ~/.claude/model-router/router-stats.mjs
+```
+
+```
+══════ SUBAGENT SUMMARY (real) ══════
+  subagents run               7
+  tokens used              2.1M
+  spent (actual)          $3.42
+  if all on opus          $8.71   ← cost with no cheap delegation
+  YOU SAVED               $5.29   (60.7% cheaper)
+
+spend by model  (real tokens · $ · share)
+  sonnet-5       ███████░░░  1.2M    $2.10    61%
+  haiku-4-5      ████░░░░░░  0.9M    $1.32    39%
+
+ROUTING  (7 spawns logged)
+  cheap    ████░░░░  4  57%
+  mid      ███░░░░░  3  43%
+  class: retrieval 4 · other 3
+  nudges: A top→cheap 1 · B fable→down 0 · C chore→cheap 0
+```
+
+(Numbers illustrative; sections appear as data accumulates — real spend first, routing
+distribution below, estimate fallback only until real usage is captured.)
+
+## Impact report — how it's built
 The advisory hook logs one JSONL event per subagent spawn (tier / requested model / task class / which nudge fired) to `~/.claude/model-router/events.jsonl`.
 
 The `SessionStart` hook installs a **version-independent launcher** on first session start, so any user gets the same terminal command regardless of which plugin version is active. Pick the form for your OS:
@@ -59,7 +115,11 @@ Agents, both hooks, and the routing rule load automatically; no files are touche
 /plugin marketplace add ZizzX/claude-model-router
 /plugin install model-router@claude-model-router
 ```
-`/plugin list` to check, `/plugin marketplace update` then `/reload-plugins` to update.
+Restart Claude Code (or start a new session) — hooks are snapshotted at session start.
+`/plugin list` to check.
+
+Verify it's live: ask "where is X defined?" — the agent should spawn `scout` (haiku)
+instead of grepping in the main thread; `router-stats` starts showing spawns.
 
 ### Option B — script (no plugin: agents + rule written into global CLAUDE.md)
 Use this only if you don't want the plugin. It copies the agents and writes the routing rule into `~/.claude/CLAUDE.md` (a plugin delivers the same rule via the SessionStart hook instead). Note: `install.sh` does **not** register the hooks — the advisory nudge, spawn logging, and impact report are plugin-only.
@@ -74,9 +134,11 @@ bash ~/claude-model-router/install.sh --link   # symlink (git pull auto-updates 
 > Don't run both paths: the plugin already injects the rule via the SessionStart hook, so `install.sh` would add a redundant copy to your `CLAUDE.md`.
 
 ## Update
-- **Plugin:** `/plugin marketplace update` then `/reload-plugins`.
+- **Plugin:** `/plugin marketplace update claude-model-router` then `/reload-plugins` (or restart).
 - **Script (copy):** `git pull && bash install.sh`.
 - **Script (`--link`):** `git pull` — symlinked agents update automatically; re-run only to refresh the CLAUDE.md block.
+
+To remove the plugin: `/plugin uninstall model-router@claude-model-router`.
 
 ## Intentionally NOT ported
 - Project-specific agents (a repo-tuned `scout`/`analyst` variant with your paths and rules) — keep those local.
